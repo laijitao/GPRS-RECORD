@@ -13,7 +13,6 @@ import org.springframework.web.client.RestTemplate;
 import com.hp.cmcc.bboss.gprs.pojo.BbdcTypeCdr;
 import com.hp.cmcc.bboss.gprs.pojo.GprsRecFilePara;
 import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
-import com.hp.cmcc.bboss.gprs.pojo.OutFileRecord;
 import com.hp.cmcc.bboss.gprs.service.RecordService;
 
 @RestController
@@ -30,18 +29,15 @@ public class RestTemplateTestControl {
 		String fn = grfp.getFileName();
 		Integer fnId = grfp.getFileNameId();
 		
-		List<OutFileRecord> list = new LinkedList<OutFileRecord>();
-		list.clear();
-		for(String record : fb) {
-			OutFileRecord of = rs.recordToFormat(record, rule,fn,fnId);
-			String recordHash = "test_hash_record";
+		List<String> fileBody = new LinkedList<>();;
+		for(String re : fb) {
+//			String recordHash = "test_hash_record";
 //					rt.getForObject("http://xxxx",String.class);//调服务
-			of.setRecord_hash(recordHash);
-			list.add(of);
+			String record = rs.createAfterData(rule, re,fn,fnId);
+			fileBody.add(record);
 		}
-		List<String> crl = rs.createRecordList(list,rule);
 		Integer errNum = 25;
-		HandleReturnPara hrp = new HandleReturnPara(crl, errNum);
+		HandleReturnPara hrp = new HandleReturnPara(fileBody, errNum);
 		return hrp;
 	}
 }

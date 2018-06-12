@@ -33,32 +33,6 @@ import com.hp.cmcc.bboss.gprs.utils.PubData.TimeStrFmt;
 public class Tools {
 	static Logger L = LoggerFactory.getLogger(Tools.class);
 	
-
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public Object createObjectByTable(List<BbdcTypeCdr> rule) {
-		// 设置类成员属性  
-        HashMap map = new HashMap();
-        map.clear();
-        	try {
-        		for(BbdcTypeCdr cdr : rule) {
-        			map.put(cdr.getFieldName(), Class.forName(cdr.getFieldType()));
-        		}
-        		// 生成动态 Bean  
-                DynamicBean bean = new DynamicBean(map);
-                
-                for(BbdcTypeCdr cdr : rule) {
-                	 bean.setValue(cdr.getFieldName(), cdr.getFieldValue());
-        		}
-                // 获得bean的实体  
-                Object obj = bean.getObject();
-                return obj; 
-			} catch (ClassNotFoundException e) {
-				L.error("create object filed, reason: "
-						+ "field type is not a complete format(Correct format:java.lang.String,...)!");
-			} 
-        	return null;
-	}
-	
 	public static boolean IsEmpty(String str) {
 		return str == null ? true : str.length() == 0 ? true : false;
 	}

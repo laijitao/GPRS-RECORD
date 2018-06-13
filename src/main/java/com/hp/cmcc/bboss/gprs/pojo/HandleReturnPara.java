@@ -8,7 +8,6 @@ public class HandleReturnPara {
 	
 	public HandleReturnPara() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
 
 	public HandleReturnPara(List<String> records, Integer errNum) {

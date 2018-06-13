@@ -11,18 +11,18 @@ public class GprsRecFilePara implements Serializable{
 	private List<String> fileBody;
 	private List<BbdcTypeCdr> rule;
 	private String fileName;
-	private Integer fileNameId;
+	private Integer fileId;
 	
 	public GprsRecFilePara() {
 		super();
 	}
 
-	public GprsRecFilePara(List<String> fileBody, List<BbdcTypeCdr> rule, String fileName, Integer fileNameId) {
+	public GprsRecFilePara(List<String> fileBody, List<BbdcTypeCdr> rule, String fileName, Integer fileId) {
 		super();
 		this.fileBody = fileBody;
 		this.rule = rule;
 		this.fileName = fileName;
-		this.fileNameId = fileNameId;
+		this.fileId = fileId;
 	}
 
 	public List<BbdcTypeCdr> getRule() {
@@ -49,13 +49,12 @@ public class GprsRecFilePara implements Serializable{
 		this.fileName = fileName;
 	}
 
-	public Integer getFileNameId() {
-		return fileNameId;
+	public Integer getfileId() {
+		return fileId;
 	}
 
-	public void setFileNameId(Integer fileNameId) {
-		this.fileNameId = fileNameId;
+	public void setfileId(Integer fileId) {
+		this.fileId = fileId;
 	}
-	
-	
+
 }

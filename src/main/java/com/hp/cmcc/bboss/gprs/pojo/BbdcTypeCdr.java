@@ -19,7 +19,7 @@ public class BbdcTypeCdr implements Serializable {
 	private String dataSeparator;//分隔符
 	private String dataType;     //数据类型
 	private Date effDate;        //生效时间
-	private Date expDate;        //实现时间
+	private Date expDate;        //失效时间
 	private Long fieldIdx;       //字段索引
 	private Long fieldLen;       //字段长度
 	private String fieldName;    //文件名
@@ -28,17 +28,26 @@ public class BbdcTypeCdr implements Serializable {
 	private Long formerIdx;      //记录处理前字段所处位置
 	private Long hinderIdx;      //记录处理后字段所处位置
 	private String valName;      //业务名称
-	private String valType;      //字段所属位置（文件名，文件头，文件体，文件尾）
-	private String validateRegex;
+	private String valType;      //字段所属部分（文件名，文件头，文件体，文件尾）
+	private String validateRegex;//校验正则表达式
 
-	public BbdcTypeCdr(String fieldName,String dataSeparator, Long formerIdx, Long hinderIdx, String fieldType) {
+	public BbdcTypeCdr(String fieldName,String dataSeparator, Long formerIdx, Long hinderIdx) {
 		super();
 		this.fieldName = fieldName;
 		this.dataSeparator = dataSeparator;
-		this.fieldType = fieldType;
 		this.formerIdx = formerIdx;
 		this.hinderIdx = hinderIdx;
 	}
+	
+	public BbdcTypeCdr(String fieldName,String dataSeparator, Long formerIdx, Long hinderIdx,String dataFiller) {
+		super();
+		this.fieldName = fieldName;
+		this.dataSeparator = dataSeparator;
+		this.formerIdx = formerIdx;
+		this.hinderIdx = hinderIdx;
+		this.dataFiller = dataFiller;
+	}
+
 
 	public BbdcTypeCdr() {
 	}

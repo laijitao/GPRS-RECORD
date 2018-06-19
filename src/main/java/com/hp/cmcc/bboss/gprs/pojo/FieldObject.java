@@ -1,17 +1,17 @@
 package com.hp.cmcc.bboss.gprs.pojo;
 
-public class FieldData {
+public class FieldObject {
 	
 	private String fn;
 	private String fv;
 	private Integer fi;
 	private String septor;
 	
-	public FieldData() {
+	public FieldObject() {
 		super();
 	}
 
-	public FieldData(String fn,String fv, Integer fi,String septor) {
+	public FieldObject(String fn,String fv, Integer fi,String septor) {
 		super();
 		this.fn = fn;
 		this.fv = fv;

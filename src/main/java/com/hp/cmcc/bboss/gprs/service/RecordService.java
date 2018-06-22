@@ -170,7 +170,7 @@ public class RecordService {
 		List<String> fileBody = new LinkedList<>();;
 		for(String re : fb) {
 			String hashCode = "";
-			if((int)Math.random()*10 == 5) {
+			if(new Random().nextInt(10)+1 == 5) {
 				hashCode = "";
 			}else {
 				hashCode = 

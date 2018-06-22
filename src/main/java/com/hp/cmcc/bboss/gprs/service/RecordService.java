@@ -166,7 +166,6 @@ public class RecordService {
 		List<String> fb = grfp.getFileBody();
 		List<BbdcTypeCdr> rule = grfp.getRule();
 		String fn = grfp.getFileName();
-//		Integer fId = grfp.getfileId();
 		
 		List<String> fileBody = new LinkedList<>();;
 		for(String re : fb) {

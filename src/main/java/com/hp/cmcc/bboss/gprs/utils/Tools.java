@@ -48,6 +48,10 @@ public class Tools {
 		return Str2Time(time_str, fmt).atZone(PubData.LocTZ).toInstant().toEpochMilli();
 	}
 	
+	public static String strToUpperCase(String s) {
+		return Tools.IsBlank(s) == true ? null : s.toUpperCase();
+	}
+	
 	public static LocalDateTime Str2Time(String time_str, TimeStrFmt fmt) {
 		LocalDateTime rv_ = PubData.UNIX_EPOCH_DATE;
 		DateTimeFormatter dtf = null;

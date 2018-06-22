@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.hp.cmcc.bboss</groupId>
-	<artifactId>server</artifactId>
+	<artifactId>record-server</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
@@ -33,7 +33,7 @@
 		<dependency>
 	        <groupId>org.springframework.cloud</groupId>
 	        <artifactId>spring-cloud-starter-eureka-server</artifactId>
-	　　    </dependency>
+	    </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
@@ -43,36 +43,30 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		
-        <!-- https://mvnrepository.com/artifact/cglib/cglib-nodep -->
 		<dependency>
 		    <groupId>cglib</groupId>
 		    <artifactId>cglib-nodep</artifactId>
 		    <version>2.2</version>
 		</dependency>
-  		<dependency>
-			<groupId>com.oracle</groupId>
-			<artifactId>ojdbc6</artifactId>
-			<version>11.1.0.7.0</version>
+  		<!-- https://mvnrepository.com/artifact/com.oracle/ojdbc14 -->
+		<dependency>
+		    <groupId>com.oracle</groupId>
+		    <artifactId>ojdbc14</artifactId>
+		    <version>10.2.0.4.0</version>
 		</dependency>
 		<dependency>  
         	<groupId>org.springframework.boot</groupId>  
         	<artifactId>spring-boot-starter-security</artifactId>  
     	</dependency> 
-    	<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-jdbc -->
 		<dependency>
 		    <groupId>org.springframework.boot</groupId>
 		    <artifactId>spring-boot-starter-jdbc</artifactId>
 		</dependency>
-    	<!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
 		<dependency>
 		    <groupId>mysql</groupId>
 		    <artifactId>mysql-connector-java</artifactId>
-		    <version>5.1.38</version>
 		</dependency>
-    	
 	</dependencies>
-
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -84,7 +78,6 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-
 	<build>
 		<plugins>
 			<plugin>
@@ -93,7 +86,6 @@
 			</plugin>
 		</plugins>
 	</build>
-
 	<repositories>
 		<repository>
 			<id>spring-snapshots</id>
@@ -112,7 +104,6 @@
 			</snapshots>
 		</repository>
 	</repositories>
-
 	<pluginRepositories>
 		<pluginRepository>
 			<id>spring-snapshots</id>
@@ -131,6 +122,4 @@
 			</snapshots>
 		</pluginRepository>
 	</pluginRepositories>
-
-
 </project>

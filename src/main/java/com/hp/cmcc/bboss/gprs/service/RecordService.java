@@ -22,6 +22,10 @@ import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
 import com.hp.cmcc.bboss.gprs.utils.Tools;
 
 
+/**
+ * @author Administrator
+ *
+ */
 @Service
 public class RecordService {
 	
@@ -31,17 +35,20 @@ public class RecordService {
 	@Autowired
 	@Qualifier("primaryJdbcTemplate")
 	protected JdbcTemplate jdbcTemplate1;
-
-	@Autowired
-	@Qualifier("secondaryJdbcTemplate")
-	protected JdbcTemplate jdbcTemplate2;
 	
 	Logger L = LoggerFactory.getLogger(RecordService.class);
 	
 	public String[] strToArr(String record){
 		return record.split(",");
 	}
-	
+		
+	/**
+	 * @param 规则
+	 * @param 文件记录
+	 * @param 记录hash
+	 * @param 文件名
+	 * @return 一条记录中处理后对应字段名，字段索引，字段值封装成的对象
+	 */
 	public List<FieldObject> createCdrData(List<BbdcTypeCdr> rule,String record,String hashCode,String fn){
 		
 		String[] S = strToArr(record);
@@ -76,7 +83,7 @@ public class RecordService {
 						osn = getOperSerialNbrByKey(key);
 						fieldObject.setfv(osn);
 					} catch (Exception e) {
-						L.error("[the Oper_Serial_Nbr for KEY:"+key+" is null or not exist!]",e);
+						L.error("[the OPER_SERIAL_NBR for KEY:"+key+" is null or not exist!]",e);
 						fieldObject.setfv(osn);
 						S[getErrCodeIndex(map)] = "F999";
 					}
@@ -96,12 +103,22 @@ public class RecordService {
 		return map.get("ERR_CODE".toUpperCase()).getFormerIdx().intValue();
 	}
 	
+	/**
+	 * @param 关键字
+	 * @return 操作流水
+	 * @throws Exception
+	 */
 	private String getOperSerialNbrByKey(String key) throws Exception{
-		String s = jdbcTemplate1.queryForObject("select Oper_Serial_Nbr from import.bdc_gprs_011701_t "
+		String s = jdbcTemplate1.queryForObject("select OPER_SERIAL_NBR from import.bdc_gprs_011701_t "
 					+ "where KEY='"+key+"'" , String.class);
 		return s;
 	}
 
+	/**
+	 * @param s:记录转化后的数组
+	 * @param map:规则
+	 * @return 关键字
+	 */
 	private String getKeyWord(String[] s,Map<String,BbdcTypeCdr> map) {
 		String key = "";
 		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
@@ -112,6 +129,11 @@ public class RecordService {
 		return key;
 	}
 	
+	/**
+	 * @param S
+	 * @param rule
+	 * @return
+	 */
 	private String getKeyWordFromrecord(String S,List<BbdcTypeCdr> rule) {
 		Map<String,BbdcTypeCdr> map = getRuleMap(rule);
 		String key = "";
@@ -124,6 +146,10 @@ public class RecordService {
 		return key;
 	}
 
+	/**
+	 * @param rule:规则
+	 * @return 以FIELD_NAME为key，规则为value的map
+	 */
 	private Map<String,BbdcTypeCdr> getRuleMap(List<BbdcTypeCdr> rule) {
 		Map<String,BbdcTypeCdr> map = new HashMap<String,BbdcTypeCdr>();
 		for(BbdcTypeCdr cdr : rule) {
@@ -132,15 +158,24 @@ public class RecordService {
 		return map;
 	}
 
+	/**
+	 * @param 根据记录转化为对象的List
+	 * @return 拼接后的字符串
+	 */
 	public String createOutRecord(List<FieldObject> D){
 		StringBuffer sb = new StringBuffer();
 		D.sort((x,y) -> Integer.compare(x.getFi(), y.getFi()));
 		for(FieldObject d : D) {
-			sb.append(d.getfv()+"','");
+			sb.append(setSqlFieldStr(d)+",");
 		}
-		return "'"+sb.toString().substring(0, sb.toString().length()-3)+"'";
+		return sb.toString().substring(0, sb.toString().length()-1);
 	}
 
+	/**
+	 * @param 文件体
+	 * @param 规则
+	 * @return 错单数量
+	 */
 	public Integer getErrNum(List<String> fileBody,List<BbdcTypeCdr> rule) {
 		Integer errNum = 0;
 		for(BbdcTypeCdr cdr : rule) {
@@ -158,6 +193,10 @@ public class RecordService {
 		return errNum;
 	}
 
+	/**
+	 * @param 被调用时获取到的参数对象
+	 * @return 处理后的传递参数对象
+	 */
 	public HandleReturnPara HandleRecord(GprsRecFilePara grfp) {
 		if(grfp == null) {
 			L.error("[request data is null, pls check!]");
@@ -170,15 +209,17 @@ public class RecordService {
 		List<String> fileBody = new LinkedList<>();;
 		for(String re : fb) {
 			String hashCode = "";
-			if(new Random().nextInt(10)+1 == 5) {
-				hashCode = "";
-			}else {
-				hashCode = 
-						"hash_record";
+			try {
+				if(new Random().nextInt(10)+1 != 5) {
+					hashCode = 
+							"hash_record";
 //						rt.getForObject("http://bdc-file-service/file/test",String.class);//调服务
-			}
-			if(Tools.IsBlank(hashCode)) {
-				re = setErrCode(re,rule);
+				}
+				if(Tools.IsBlank(hashCode)) {
+					re = setErrCode(re,rule);
+					throw new Exception("the RECORD_HASH is null or not exist");
+				}
+			} catch (Exception e) {
 				L.error("[the RECORD_HASH for key:{} is null or not exist]", getKeyWordFromrecord(re,rule));
 			}
 			String record = createOutRecord(createCdrData(rule, re,hashCode,fn));
@@ -189,6 +230,11 @@ public class RecordService {
 		return hrp;
 	}
 
+	/**
+	 * @param 一条记录
+	 * @param 规则
+	 * @return 重置错码后的记录
+	 */
 	private String setErrCode(String re, List<BbdcTypeCdr> rule) {
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
 		String[] record = strToArr(re);
@@ -196,11 +242,22 @@ public class RecordService {
 		return arrToRecord(record);
 	}
 
+	/**
+	 * @param 记录转化后的数组
+	 * @return 以“,”为分隔符的字符串
+	 */
 	private String arrToRecord(String[] record) {
 		StringBuffer re = new StringBuffer("");
 		for(int i = 0;i < record.length;i++) {
 			re.append(record[i]+",");
 		}
 		return re.toString().substring(0, re.length()-1);
+	}
+	
+	public String setSqlFieldStr(FieldObject fo) {
+		if("CREATE_DATE".equals(fo.getFn().toUpperCase())) {
+			return fo.getfv();
+		} 
+		return "'"+fo.getfv()+"'";
 	}
 }

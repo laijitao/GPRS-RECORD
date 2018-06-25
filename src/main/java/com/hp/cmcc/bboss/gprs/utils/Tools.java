@@ -33,6 +33,10 @@ import com.hp.cmcc.bboss.gprs.utils.PubData.TimeStrFmt;
 public class Tools {
 	static Logger L = LoggerFactory.getLogger(Tools.class);
 	
+	public String str2UpperCase(String s) {
+		return s.toUpperCase();
+	}
+	
 	public static boolean IsEmpty(String str) {
 		return str == null ? true : str.length() == 0 ? true : false;
 	}

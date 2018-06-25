@@ -194,6 +194,7 @@ public class RecordService {
 	 * @param 规则
 	 * @return 重置错码后的记录
 	 */
+	@SuppressWarnings("unused")
 	private String setErrCode(String re, List<BbdcTypeCdr> rule,String errCOde) {
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
 		String[] record = strToArr(re);
@@ -214,9 +215,10 @@ public class RecordService {
 	}
 	
 	public String setSqlFieldStr(FieldObject fo) {
-		if("CREATE_DATE".equals(fo.getFn().toUpperCase())) {
+		if("DATE".equals(fo.getFt().toUpperCase())) {
 			return fo.getfv();
 		} 
 		return "'"+fo.getfv()+"'";
 	}
+	
 }

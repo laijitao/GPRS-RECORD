@@ -5,8 +5,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +17,6 @@ import com.hp.cmcc.bboss.gprs.pojo.BbdcTypeCdr;
 import com.hp.cmcc.bboss.gprs.pojo.FieldObject;
 import com.hp.cmcc.bboss.gprs.pojo.GprsRecFilePara;
 import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
-import com.hp.cmcc.bboss.gprs.utils.Tools;
 
 
 /**
@@ -49,7 +46,7 @@ public class RecordService {
 	 * @param 文件名
 	 * @return 一条记录中处理后对应字段名，字段索引，字段值封装成的对象
 	 */
-	public List<FieldObject> createCdrData(List<BbdcTypeCdr> rule,String record,String hashCode,String fn){
+	public List<FieldObject> createCdrData(List<BbdcTypeCdr> rule,String record,String fn){
 		
 		String[] S = strToArr(record);
 //		String[] S = validation(record,cdr);//后期校验
@@ -67,9 +64,6 @@ public class RecordService {
 				if("CREATE_DATE".equals(cdr.getFieldName().toUpperCase())){
 					fieldObject.setfv(cdr.getDataFiller());
 				}
-//				if("File_Id".equals(cdr.getFieldName())){
-//					fieldObject.setfv(fId.toString());
-//				}
 				if("FILE_NAME".equals(cdr.getFieldName().toUpperCase())){
 					fieldObject.setfv(fn);
 				}
@@ -77,19 +71,15 @@ public class RecordService {
 					fieldObject.setfv(cdr.getDataFiller());
 				}
 				if("OPER_SERIAL_NBR".equals(cdr.getFieldName().toUpperCase())){
-//					fieldData.setfv(getOperSerialNbr(rule,S));
 					String osn = null;
 					try {
 						osn = getOperSerialNbrByKey(key);
 						fieldObject.setfv(osn);
 					} catch (Exception e) {
-						L.error("[the OPER_SERIAL_NBR for KEY:"+key+" is null or not exist!]",e);
+						L.error("[the OPER_SERIAL_NBR for RECORD_HASH:"+key+" is null or not exist!]",e);
 						fieldObject.setfv(osn);
 						S[getErrCodeIndex(map)] = "F999";
 					}
-				}
-				if("RECORD_HASH".equals(cdr.getFieldName().toUpperCase())){
-					fieldObject.setfv(hashCode);
 				}
 			}else {
 				fieldObject.setfv(S[cdr.getFormerIdx().intValue()]);
@@ -100,7 +90,7 @@ public class RecordService {
 	}
 	
 	public int getErrCodeIndex(Map<String, BbdcTypeCdr> map) {
-		return map.get("ERR_CODE".toUpperCase()).getFormerIdx().intValue();
+		return map.get("ERR_CODE").getFormerIdx().intValue();
 	}
 	
 	/**
@@ -110,7 +100,7 @@ public class RecordService {
 	 */
 	private String getOperSerialNbrByKey(String key) throws Exception{
 		String s = jdbcTemplate1.queryForObject("select OPER_SERIAL_NBR from import.bdc_gprs_011701_t "
-					+ "where KEY='"+key+"'" , String.class);
+					+ "where RECORD_HASH='"+key+"'" , String.class);
 		return s;
 	}
 
@@ -122,30 +112,13 @@ public class RecordService {
 	private String getKeyWord(String[] s,Map<String,BbdcTypeCdr> map) {
 		String key = "";
 		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
-			if("KEY".equals(entry.getKey().toUpperCase())) {
+			if("RECORD_HASH".equals(entry.getKey().toUpperCase())) {
 				key = s[entry.getValue().getFormerIdx().intValue()];
 			}
 		}
 		return key;
 	}
 	
-	/**
-	 * @param S
-	 * @param rule
-	 * @return
-	 */
-	private String getKeyWordFromrecord(String S,List<BbdcTypeCdr> rule) {
-		Map<String,BbdcTypeCdr> map = getRuleMap(rule);
-		String key = "";
-		String[] s = strToArr(S);
-		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
-			if("KEY".equals(entry.getKey().toUpperCase())) {
-				key = s[entry.getValue().getFormerIdx().intValue()];
-			}
-		}
-		return key;
-	}
-
 	/**
 	 * @param rule:规则
 	 * @return 以FIELD_NAME为key，规则为value的map
@@ -181,7 +154,7 @@ public class RecordService {
 		for(BbdcTypeCdr cdr : rule) {
 			if("ERR_CODE".equals(cdr.getFieldName().toUpperCase())) {
 				for(String s : fileBody) {
-					if(s.split(",")//处理后的记录转化为数组
+					if(s.split(",")//处理后的记录转化的数组
 							[cdr.getHinderIdx().intValue()].trim()//根据错码下标获取错码
 									.startsWith("'F")) {//判断是否为错码
 						errNum++;
@@ -208,21 +181,7 @@ public class RecordService {
 		
 		List<String> fileBody = new LinkedList<>();;
 		for(String re : fb) {
-			String hashCode = "";
-			try {
-				if(new Random().nextInt(10)+1 != 5) {
-					hashCode = 
-							"hash_record";
-//						rt.getForObject("http://bdc-file-service/file/test",String.class);//调服务
-				}
-				if(Tools.IsBlank(hashCode)) {
-					re = setErrCode(re,rule);
-					throw new Exception("the RECORD_HASH is null or not exist");
-				}
-			} catch (Exception e) {
-				L.error("[the RECORD_HASH for key:{} is null or not exist]", getKeyWordFromrecord(re,rule));
-			}
-			String record = createOutRecord(createCdrData(rule, re,hashCode,fn));
+			String record = createOutRecord(createCdrData(rule, re ,fn));
 			fileBody.add(record);
 		}
 		Integer errNum = getErrNum(fileBody,rule);
@@ -235,10 +194,10 @@ public class RecordService {
 	 * @param 规则
 	 * @return 重置错码后的记录
 	 */
-	private String setErrCode(String re, List<BbdcTypeCdr> rule) {
+	private String setErrCode(String re, List<BbdcTypeCdr> rule,String errCOde) {
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
 		String[] record = strToArr(re);
-		record[map.get("ERR_CODE").getFormerIdx().intValue()] = "F998";
+		record[map.get("ERR_CODE").getFormerIdx().intValue()] = errCOde;
 		return arrToRecord(record);
 	}
 

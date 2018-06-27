@@ -17,6 +17,7 @@ import com.hp.cmcc.bboss.gprs.pojo.BbdcTypeCdr;
 import com.hp.cmcc.bboss.gprs.pojo.FieldObject;
 import com.hp.cmcc.bboss.gprs.pojo.GprsRecFilePara;
 import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
+import com.hp.cmcc.bboss.gprs.utils.Tools;
 
 
 /**
@@ -36,7 +37,7 @@ public class RecordService {
 	Logger L = LoggerFactory.getLogger(RecordService.class);
 	
 	public String[] strToArr(String record){
-		return record.split(",");
+		return record.split(";");
 	}
 		
 	/**
@@ -114,6 +115,7 @@ public class RecordService {
 		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
 			if("RECORD_HASH".equals(entry.getKey().toUpperCase())) {
 				key = s[entry.getValue().getFormerIdx().intValue()];
+				break;
 			}
 		}
 		return key;
@@ -139,7 +141,7 @@ public class RecordService {
 		StringBuffer sb = new StringBuffer();
 		D.sort((x,y) -> Integer.compare(x.getFi(), y.getFi()));
 		for(FieldObject d : D) {
-			sb.append(setSqlFieldStr(d)+",");
+			sb.append(setSqlFieldStr(d,"CREATE_DATE")+",");
 		}
 		return sb.toString().substring(0, sb.toString().length()-1);
 	}
@@ -173,7 +175,15 @@ public class RecordService {
 	public HandleReturnPara HandleRecord(GprsRecFilePara grfp) {
 		if(grfp == null) {
 			L.error("[request data is null, pls check!]");
-			return new HandleReturnPara();
+			return null;
+		}
+		if(Tools.IsEmpty(grfp.getFileBody())) {
+			L.error("[request FileBody is null, pls check!]");
+			return null;
+		}
+		if(Tools.IsEmpty(grfp.getRule())) {
+			L.error("[request validat rule is null, pls check!]");
+			return null;
 		}
 		List<String> fb = grfp.getFileBody();
 		List<BbdcTypeCdr> rule = grfp.getRule();
@@ -181,6 +191,9 @@ public class RecordService {
 		
 		List<String> fileBody = new LinkedList<>();;
 		for(String re : fb) {
+			if(Tools.IsBlank(re)) {
+				continue;
+			}
 			String record = createOutRecord(createCdrData(rule, re ,fn));
 			fileBody.add(record);
 		}
@@ -214,10 +227,12 @@ public class RecordService {
 		return re.toString().substring(0, re.length()-1);
 	}
 	
-	public String setSqlFieldStr(FieldObject fo) {
-		if("DATE".equals(fo.getFt().toUpperCase())) {
-			return fo.getfv();
-		} 
+	public String setSqlFieldStr(FieldObject fo,String... fieldName) {
+		for(String fn : fieldName) {
+			if(fn.equals(fo.getFn().toUpperCase())) {
+				return fo.getfv();
+			} 
+		}
 		return "'"+fo.getfv()+"'";
 	}
 	

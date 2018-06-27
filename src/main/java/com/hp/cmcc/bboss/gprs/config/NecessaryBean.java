@@ -23,10 +23,4 @@ public class NecessaryBean {
 	        @Qualifier("primaryDataSource") DataSource dataSource) {
 	    return new JdbcTemplate(dataSource);
 	}
-
-	@Bean(name = "secondaryJdbcTemplate")
-	public JdbcTemplate secondaryJdbcTemplate(
-	        @Qualifier("secondaryDataSource") DataSource dataSource) {
-	    return new JdbcTemplate(dataSource);
-	}
 }

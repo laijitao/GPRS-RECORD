@@ -5,20 +5,18 @@ public class FieldObject {
 	private String fn;
 	private String fv;
 	private Integer fi;
-	private String ft;
 	private String septor;
 	
 	public FieldObject() {
 		super();
 	}
 
-	public FieldObject(String fn,String fv, Integer fi,String septor,String ft) {
+	public FieldObject(String fn,String fv, Integer fi,String septor) {
 		super();
 		this.fn = fn;
 		this.fv = fv;
 		this.fi = fi;
 		this.septor = septor;
-		this.ft = ft;
 	}
 
 	public String getfv() {
@@ -60,14 +58,6 @@ public class FieldObject {
 
 	public void setFv(String fv) {
 		this.fv = fv;
-	}
-
-	public String getFt() {
-		return ft;
-	}
-
-	public void setFt(String ft) {
-		this.ft = ft;
 	}
 
 	@Override

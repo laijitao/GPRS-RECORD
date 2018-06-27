@@ -17,7 +17,7 @@ public class GprsRecFilePara implements Serializable{
 		super();
 	}
 
-	public GprsRecFilePara(List<String> fileBody, List<BbdcTypeCdr> rule, String fileName, Integer fileId) {
+	public GprsRecFilePara(List<String> fileBody, List<BbdcTypeCdr> rule, String fileName) {
 		super();
 		this.fileBody = fileBody;
 		this.rule = rule;

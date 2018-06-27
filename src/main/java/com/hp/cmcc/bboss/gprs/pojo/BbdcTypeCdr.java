@@ -22,8 +22,8 @@ public class BbdcTypeCdr implements Serializable {
 	private Date expDate;        //失效时间
 	private Long fieldIdx;       //字段索引
 	private Long fieldLen;       //字段长度
-	private String fieldName;    //文件名
-	private String fieldType;    //字段划分类型（CDR，CVS）
+	private String fieldName;    //字段名
+	private String fieldType;    //字段类型（CDR，CVS，enum）
 	private String fieldValue;   //字段取值的来源（来自数据库查询还是系统配置）
 	private Long formerIdx;      //记录处理前字段所处位置
 	private Long hinderIdx;      //记录处理后字段所处位置

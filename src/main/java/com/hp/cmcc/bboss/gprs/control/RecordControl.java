@@ -5,7 +5,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -27,6 +26,7 @@ public class RecordControl {
 	@RequestMapping(value = "/record/addField", method = RequestMethod.POST,consumes = "application/json")
 	public HandleReturnPara fn(@RequestParam("fileBody") List<String> fileBody, @RequestBody List<BbdcTypeCdr> rule, 
 			@RequestParam("fileName") String fileName) {
+		rs.createLogForTest(L,fileBody,rule,fileName);
 		GprsRecFilePara grfp = new GprsRecFilePara(fileBody, rule, fileName);
 		HandleReturnPara hrp = rs.HandleRecord(grfp);
 		return hrp;

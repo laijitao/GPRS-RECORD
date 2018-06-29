@@ -212,4 +212,14 @@ public class BbdcTypeCdr implements Serializable {
 		this.validateRegex = validateRegex;
 	}
 
+	@Override
+	public String toString() {
+		return "BbdcTypeCdr [id=" + id + ", dataAlign=" + dataAlign + ", dataFiller=" + dataFiller + ", dataLen="
+				+ dataLen + ", dataPattern=" + dataPattern + ", dataReplace=" + dataReplace + ", dataSeparator="
+				+ dataSeparator + ", dataType=" + dataType + ", effDate=" + effDate + ", expDate=" + expDate
+				+ ", fieldIdx=" + fieldIdx + ", fieldLen=" + fieldLen + ", fieldName=" + fieldName + ", fieldType="
+				+ fieldType + ", fieldValue=" + fieldValue + ", formerIdx=" + formerIdx + ", hinderIdx=" + hinderIdx
+				+ ", valName=" + valName + ", valType=" + valType + ", validateRegex=" + validateRegex + "]";
+	}
+
 }

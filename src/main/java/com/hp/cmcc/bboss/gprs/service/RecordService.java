@@ -17,12 +17,13 @@ import com.hp.cmcc.bboss.gprs.pojo.BbdcTypeCdr;
 import com.hp.cmcc.bboss.gprs.pojo.FieldObject;
 import com.hp.cmcc.bboss.gprs.pojo.GprsRecFilePara;
 import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
+import com.hp.cmcc.bboss.gprs.utils.PubData;
 import com.hp.cmcc.bboss.gprs.utils.Tools;
 
 
 /**
- * @author Administrator
- *
+ * @author ljt
+ * 2018-06-27
  */
 @Service
 public class RecordService {
@@ -37,7 +38,7 @@ public class RecordService {
 	Logger L = LoggerFactory.getLogger(RecordService.class);
 	
 	public String[] strToArr(String record){
-		return record.split(";");
+		return record.split(";",-1);
 	}
 		
 	/**
@@ -68,18 +69,22 @@ public class RecordService {
 				if("FILE_NAME".equals(cdr.getFieldName().toUpperCase())){
 					fieldObject.setfv(fn);
 				}
-				if("BDC_CODE".equals(cdr.getFieldName().toUpperCase())){
-					fieldObject.setfv(cdr.getDataFiller());
-				}
-				if("OPER_SERIAL_NBR".equals(cdr.getFieldName().toUpperCase())){
-					String osn = null;
-					try {
-						osn = getOperSerialNbrByKey(key);
-						fieldObject.setfv(osn);
-					} catch (Exception e) {
-						L.error("[the OPER_SERIAL_NBR for RECORD_HASH:"+key+" is null or not exist!]",e);
-						fieldObject.setfv(osn);
-						S[getErrCodeIndex(map)] = "F999";
+				if(isConfirmServiceByFileName(fn)) {
+					if("BDC_CODE".equals(cdr.getFieldName().toUpperCase())){
+						fieldObject.setfv(cdr.getDataFiller());
+					}
+					if("OPER_SERIAL_NBR".equals(cdr.getFieldName().toUpperCase())){
+						String osn = null;
+						String sql = getSql(S,map);
+						try {
+							osn = getOperSerialNbrByKey(sql);
+							fieldObject.setfv(osn);
+						} catch (Exception e) {
+							L.warn("[SQL:"+sql+"]");
+							L.error("[the OPER_SERIAL_NBR for RECORD_HASH:"+key+" is null or not exist!]",e);
+							fieldObject.setfv(osn);
+							S[getErrCodeIndex(map)] = "F999";//自定义错码，当查不到操作流水时
+						}
 					}
 				}
 			}else {
@@ -89,7 +94,13 @@ public class RecordService {
 		}
 		return list;
 	}
-	
+
+	private String getSql(String[] s, Map<String, BbdcTypeCdr> map) {
+		String key = getKeyWord(s, map);
+		String sql = map.get("RECORD_HASH").getDataFiller();
+		return sql.trim().substring(0,sql.length()-1)+"'"+key+"'";
+	}
+
 	public int getErrCodeIndex(Map<String, BbdcTypeCdr> map) {
 		return map.get("ERR_CODE").getFormerIdx().intValue();
 	}
@@ -99,9 +110,8 @@ public class RecordService {
 	 * @return 操作流水
 	 * @throws Exception
 	 */
-	private String getOperSerialNbrByKey(String key) throws Exception{
-		String s = jdbcTemplate1.queryForObject("select OPER_SERIAL_NBR from import.bdc_gprs_011701_t "
-					+ "where RECORD_HASH='"+key+"'" , String.class);
+	private String getOperSerialNbrByKey(String sql) throws Exception{
+		String s = jdbcTemplate1.queryForObject(sql, String.class);
 		return s;
 	}
 
@@ -189,7 +199,7 @@ public class RecordService {
 		List<BbdcTypeCdr> rule = grfp.getRule();
 		String fn = grfp.getFileName();
 		
-		List<String> fileBody = new LinkedList<>();;
+		List<String> fileBody = new LinkedList<>();
 		for(String re : fb) {
 			if(Tools.IsBlank(re)) {
 				continue;
@@ -235,5 +245,39 @@ public class RecordService {
 		}
 		return "'"+fo.getfv()+"'";
 	}
+
 	
+	/**
+	 * @param l
+	 * @param fileBody
+	 * @param rule
+	 * @param fileName
+	 * 打印测试的日志
+	 */
+	public void createLogForTest(Logger l, List<String> fileBody, List<BbdcTypeCdr> rule, String fileName) {
+		if(Tools.IsEmpty(fileBody) || Tools.IsEmpty(rule) || Tools.IsBlank(fileName)) {
+			l.error("request parameter wrong]");
+		}
+		for(int i = 0; i < fileBody.size();i++) {
+			l.warn("[FILEBODY-"+i+":"+fileBody.get(i).toString()+"]");
+		}
+		for(int i = 0; i < rule.size();i++) {
+			l.warn("[RULE-"+i+":"+rule.get(i).toString()+"]");
+		}
+		l.warn("FILEName:"+fileName);
+	}
+	
+	
+	/**
+	 * @param fileName
+	 * @return 是不是需要对记录进行操作的业务类型
+	 */
+	public boolean isConfirmServiceByFileName(String fileName) {
+		if(fileName.startsWith(PubData.NOTIFY_INFO)) {
+			return false;
+		}else if(fileName.startsWith(PubData.NOTIFY_RESULT)){
+			return false;
+		}
+		return true;
+	}
 }

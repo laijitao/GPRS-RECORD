@@ -21,6 +21,11 @@ public class PubData {
 		Fmt6   // yyMMdd
 	}
 	
+	public enum NoValidService{
+		NOTIFY_INFO,
+		NOTIFY_RESULT;
+	}
+	
 	public static int[] ProvinceId = {
 			000,100,200,210,220,
 			230,240,250,270,280,
@@ -35,6 +40,9 @@ public class PubData {
 	public static final int DRCT_GPRS_FIELDS = 14;
 	
 	public static final int GPRS_NEXT_DAY = 2;
+	
+	public static final String NOTIFY_INFO = "NOTIFY_INFO";
+	public static final String NOTIFY_RESULT = "NOTIFY_RESULT";
 
 	public static final String TMFMT23 = "yyyy-MM-dd HH:mm:ss.SSS";
 	public static final String TMFMT19 = "yyyy-MM-dd HH:mm:ss";

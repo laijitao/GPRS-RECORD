@@ -13,12 +13,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.hp.cmcc.bboss.gprs.exception.ValidException;
 import com.hp.cmcc.bboss.gprs.pojo.BbdcTypeCdr;
 import com.hp.cmcc.bboss.gprs.pojo.FieldObject;
 import com.hp.cmcc.bboss.gprs.pojo.GprsRecFilePara;
 import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
 import com.hp.cmcc.bboss.gprs.utils.PubData;
 import com.hp.cmcc.bboss.gprs.utils.Tools;
+import com.hp.cmcc.bboss.gprs.valid.RecRecordValid;
+import com.hp.cmcc.bboss.gprs.valid.impl.RecRecordValidImpl;
 
 
 /**
@@ -35,12 +38,10 @@ public class RecordService {
 	@Qualifier("primaryJdbcTemplate")
 	protected JdbcTemplate jdbcTemplate1;
 	
+	RecRecordValid rv = new RecRecordValidImpl();
+	
 	Logger L = LoggerFactory.getLogger(RecordService.class);
 	
-	public String[] strToArr(String record){
-		return record.split(";",-1);
-	}
-		
 	/**
 	 * @param 规则
 	 * @param 文件记录
@@ -48,55 +49,73 @@ public class RecordService {
 	 * @param 文件名
 	 * @return 一条记录中处理后对应字段名，字段索引，字段值封装成的对象
 	 */
-	public List<FieldObject> createCdrData(List<BbdcTypeCdr> rule,String record,String fn){
+	public List<FieldObject> createCdrData(List<BbdcTypeCdr> rule,String record,String fn,Long lineNum){
 		
-		String[] S = strToArr(record);
+		String[] S = Tools.strToArr(record);
 //		String[] S = validation(record,cdr);//后期校验
 		rule.sort((x,y) -> Integer.compare(x.getHinderIdx().intValue(), y.getHinderIdx().intValue()));
-		List<FieldObject> list = new LinkedList<>();
+		Map<String,FieldObject> m = new HashMap<>();
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
-		String key = getKeyWord(S,map); 
-		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) { 
+		String bdcErrCode = null;
+		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
 			BbdcTypeCdr cdr = entry.getValue(); 
 			FieldObject fieldObject = new FieldObject();
-			fieldObject.setFi(cdr.getHinderIdx().intValue());
-			fieldObject.setFn(cdr.getFieldName());
-			fieldObject.setSeptor(cdr.getDataSeparator());
+			fieldObject.setFieldIndex(cdr.getHinderIdx().intValue());
+			fieldObject.setFieldName(cdr.getFieldName());
 			if(cdr.getFormerIdx() == -1L) {
 				if("CREATE_DATE".equals(cdr.getFieldName().toUpperCase())){
-					fieldObject.setfv(cdr.getDataFiller());
+					fieldObject.setFieldValue(cdr.getDataFiller());
+				}
+				if("LINE_NUM".equals(cdr.getFieldName().toUpperCase())){
+					fieldObject.setFieldValue(lineNum+1+"");
 				}
 				if("FILE_NAME".equals(cdr.getFieldName().toUpperCase())){
-					fieldObject.setfv(fn);
+					fieldObject.setFieldValue(fn);
 				}
 				if(isConfirmServiceByFileName(fn)) {
 					if("BDC_CODE".equals(cdr.getFieldName().toUpperCase())){
-						fieldObject.setfv(cdr.getDataFiller());
+						fieldObject.setFieldValue(cdr.getDataFiller());
 					}
 					if("OPER_SERIAL_NBR".equals(cdr.getFieldName().toUpperCase())){
 						String osn = null;
-						String sql = getSql(S,map);
 						try {
-							osn = getOperSerialNbrByKey(sql);
-							fieldObject.setfv(osn);
-						} catch (Exception e) {
-							L.warn("[SQL:"+sql+"]");
-							L.error("[the OPER_SERIAL_NBR for RECORD_HASH:"+key+" is null or not exist!]",e);
-							fieldObject.setfv(osn);
-							S[getErrCodeIndex(map)] = "F999";//自定义错码，当查不到操作流水时
+							osn = getOperSerialNbrByKey(record, map);
+						} catch (ValidException e) {
+							L.error(e.getErrMsg()+",raw record:["+record+"],fileName:"+fn+",lineNum:"+lineNum,e);
+							fieldObject.setFieldValue(osn);
+							bdcErrCode = e.getErrCode();
 						}
+						fieldObject.setFieldValue(osn);
 					}
 				}
 			}else {
-				fieldObject.setfv(S[cdr.getFormerIdx().intValue()]);
+				if(S.length == Integer.parseInt(map.get("BDC_ERR_CODE").getDataPattern())) {
+					fieldObject.setFieldValue(S[cdr.getFormerIdx().intValue()]);
+				} else {
+					try {
+						rv.validFieldNum(S.length, Integer.parseInt(map.get("BDC_ERR_CODE").getDataPattern()));
+					} catch (ValidException e) {
+						bdcErrCode = e.getErrCode();
+					}
+				}
 			}
-			list.add(fieldObject);
+			m.put(fieldObject.getFieldName(),fieldObject);
 		}
-		return list;
+		if(Tools.IsBlank(bdcErrCode)) {//标识
+			m.get("BDC_ERR_CODE").setFieldValue(map.get("BDC_ERR_CODE").getDataFiller());
+		}else {
+			m.get("BDC_ERR_CODE").setFieldValue(bdcErrCode);
+		}
+		return Tools.mapToList(m);
 	}
 
-	private String getSql(String[] s, Map<String, BbdcTypeCdr> map) {
-		String key = getKeyWord(s, map);
+	/**
+	 * @param s：记录转化后的数组
+	 * @param map：规则
+	 * @return 查询操作流水的sql语句
+	 */
+	private String getSql(String record, Map<String, BbdcTypeCdr> map) {
+		String key = getKeyWord(record, map);
 		String sql = map.get("RECORD_HASH").getDataFiller();
 		return sql.trim().substring(0,sql.length()-1)+"'"+key+"'";
 	}
@@ -108,10 +127,17 @@ public class RecordService {
 	/**
 	 * @param 关键字
 	 * @return 操作流水
+	 * @throws ValidException 
 	 * @throws Exception
 	 */
-	private String getOperSerialNbrByKey(String sql) throws Exception{
-		String s = jdbcTemplate1.queryForObject(sql, String.class);
+	private String getOperSerialNbrByKey(String record, Map<String, BbdcTypeCdr> map) throws ValidException{
+		String s = null;
+		String sql = getSql(record, map);
+		try {
+			s = jdbcTemplate1.queryForObject(sql, String.class);
+		} catch (Exception e) {
+			throw new ValidException("F999","the OPER_SERIAL_NBR is null or not exist");
+		}
 		return s;
 	}
 
@@ -120,11 +146,16 @@ public class RecordService {
 	 * @param map:规则
 	 * @return 关键字
 	 */
-	private String getKeyWord(String[] s,Map<String,BbdcTypeCdr> map) {
+	private String getKeyWord(String record,Map<String,BbdcTypeCdr> map){
+		String[] s = Tools.strToArr(record);
 		String key = "";
 		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
 			if("RECORD_HASH".equals(entry.getKey().toUpperCase())) {
-				key = s[entry.getValue().getFormerIdx().intValue()];
+				try {
+					key = s[entry.getValue().getFormerIdx().intValue()];
+				} catch (Exception e) {
+					L.error("[get the keyWord failed, please check the number of record field]"+",raw record:["+record+"]",e);
+				}
 				break;
 			}
 		}
@@ -149,7 +180,7 @@ public class RecordService {
 	 */
 	public String createOutRecord(List<FieldObject> D){
 		StringBuffer sb = new StringBuffer();
-		D.sort((x,y) -> Integer.compare(x.getFi(), y.getFi()));
+		D.sort((x,y) -> Integer.compare(x.getFieldIndex(), y.getFieldIndex()));
 		for(FieldObject d : D) {
 			sb.append(setSqlFieldStr(d,"CREATE_DATE")+",");
 		}
@@ -200,12 +231,15 @@ public class RecordService {
 		String fn = grfp.getFileName();
 		
 		List<String> fileBody = new LinkedList<>();
-		for(String re : fb) {
+		String re = null;
+		for(Long i = 0L;i < fb.size();i++) {
+			re = fb.get(i.intValue());
 			if(Tools.IsBlank(re)) {
 				continue;
 			}
-			String record = createOutRecord(createCdrData(rule, re ,fn));
+			String record = createOutRecord(createCdrData(rule, re ,fn,i));
 			fileBody.add(record);
+			
 		}
 		Integer errNum = getErrNum(fileBody,rule);
 		HandleReturnPara hrp = new HandleReturnPara(fileBody, errNum);
@@ -218,9 +252,8 @@ public class RecordService {
 	 * @return 重置错码后的记录
 	 */
 	@SuppressWarnings("unused")
-	private String setErrCode(String re, List<BbdcTypeCdr> rule,String errCOde) {
+	private String setErrCode(String[] record, List<BbdcTypeCdr> rule,String errCOde) {
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
-		String[] record = strToArr(re);
 		record[map.get("ERR_CODE").getFormerIdx().intValue()] = errCOde;
 		return arrToRecord(record);
 	}
@@ -239,11 +272,14 @@ public class RecordService {
 	
 	public String setSqlFieldStr(FieldObject fo,String... fieldName) {
 		for(String fn : fieldName) {
-			if(fn.equals(fo.getFn().toUpperCase())) {
-				return fo.getfv();
+			if(Tools.IsBlank(fo.getFieldValue())) {
+				fo.setFieldValue("");
+			}
+			if(fn.equals(fo.getFieldName().toUpperCase())) {
+				return fo.getFieldValue();
 			} 
 		}
-		return "'"+fo.getfv()+"'";
+		return "'"+fo.getFieldValue()+"'";
 	}
 
 	
@@ -280,4 +316,6 @@ public class RecordService {
 		}
 		return true;
 	}
+	
+	
 }

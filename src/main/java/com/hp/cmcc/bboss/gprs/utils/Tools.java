@@ -19,7 +19,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -451,5 +454,17 @@ public class Tools {
 	
 	public static boolean compareDateStr(String d1,String d2,String fmt){
 		return compareTime(strToDate(d1,fmt),strToDate(d2,fmt));
+	}
+	
+	public static String[] strToArr(String record){
+		return record.split(";",-1);
+	}
+	
+	public static <T> List<T> mapToList(Map<String,T> map) {
+		List<T> list = new LinkedList<>();
+		for(Entry<String,T> entry : map.entrySet()) {
+			list.add((T)entry.getValue());
+		}
+		return list;
 	}
 }

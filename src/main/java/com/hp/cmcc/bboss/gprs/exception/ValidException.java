@@ -1,6 +1,6 @@
 package com.hp.cmcc.bboss.gprs.exception;
 
-public class QueryException extends Exception {
+public class ValidException extends Exception {
 
 	/**
 	 * 
@@ -10,11 +10,11 @@ public class QueryException extends Exception {
 	private String errCode;
 	private String errMsg;
 	
-	public QueryException() {
+	public ValidException() {
 		super();
 	}
 
-	public QueryException(String errCode, String errMsg) {
+	public ValidException(String errCode, String errMsg) {
 		super();
 		this.errCode = errCode;
 		this.errMsg = errMsg;

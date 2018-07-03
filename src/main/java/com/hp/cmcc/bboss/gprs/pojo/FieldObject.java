@@ -2,68 +2,50 @@ package com.hp.cmcc.bboss.gprs.pojo;
 
 public class FieldObject {
 	
-	private String fn;
-	private String fv;
-	private Integer fi;
-	private String septor;
+	private String fieldName;
+	private String fieldValue;
+	private Integer fieldIndex;
 	
 	public FieldObject() {
 		super();
 	}
 
-	public FieldObject(String fn,String fv, Integer fi,String septor) {
+	public FieldObject(String fieldName, String fieldValue, Integer fieldIndex) {
 		super();
-		this.fn = fn;
-		this.fv = fv;
-		this.fi = fi;
-		this.septor = septor;
+		this.fieldName = fieldName;
+		this.fieldValue = fieldValue;
+		this.fieldIndex = fieldIndex;
 	}
 
-	public String getfv() {
-		return fv;
+	public String getFieldName() {
+		return fieldName;
 	}
 
-	public void setfv(String fv) {
-		this.fv = fv;
+	public void setFieldName(String fieldName) {
+		this.fieldName = fieldName;
 	}
 
-	public Integer getFi() {
-		return fi;
+	public String getFieldValue() {
+		return fieldValue;
 	}
 
-	public void setFi(Integer fi) {
-		this.fi = fi;
+	public void setFieldValue(String fieldValue) {
+		this.fieldValue = fieldValue;
 	}
 
-	public String getFn() {
-		return fn;
+	public Integer getFieldIndex() {
+		return fieldIndex;
 	}
 
-	public void setFn(String fn) {
-		this.fn = fn;
-	}
-
-	public String getSeptor() {
-		return septor;
-	}
-
-	public void setSeptor(String septor) {
-		this.septor = septor;
-	}
-
-	
-	public String getFv() {
-		return fv;
-	}
-
-	public void setFv(String fv) {
-		this.fv = fv;
+	public void setFieldIndex(Integer fieldIndex) {
+		this.fieldIndex = fieldIndex;
 	}
 
 	@Override
 	public String toString() {
-		return "fn="+fn + ", " + "fv="+fv + ", " + "fi="+fi;
+		return "FieldObject [fieldName=" + fieldName + ", fieldValue=" + fieldValue + ", fieldIndex=" + fieldIndex
+				+ "]";
 	}
-	
+
 	
 }

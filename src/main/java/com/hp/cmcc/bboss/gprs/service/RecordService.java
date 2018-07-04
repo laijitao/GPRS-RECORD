@@ -16,7 +16,6 @@ import org.springframework.web.client.RestTemplate;
 import com.hp.cmcc.bboss.gprs.exception.ValidException;
 import com.hp.cmcc.bboss.gprs.pojo.BbdcTypeCdr;
 import com.hp.cmcc.bboss.gprs.pojo.FieldObject;
-import com.hp.cmcc.bboss.gprs.pojo.GprsRecFilePara;
 import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
 import com.hp.cmcc.bboss.gprs.utils.PubData;
 import com.hp.cmcc.bboss.gprs.utils.Tools;
@@ -81,7 +80,7 @@ public class RecordService {
 						try {
 							osn = getOperSerialNbrByKey(record, map);
 						} catch (ValidException e) {
-							L.error(e.getErrMsg()+",raw record:["+record+"],fileName:"+fn+",lineNum:"+lineNum,e);
+							L.error(e.getErrMsg()+",Original record:["+record+"],fileName:"+fn+",lineNum:"+lineNum,e);
 							fieldObject.setFieldValue(osn);
 							bdcErrCode = e.getErrCode();
 						}
@@ -213,22 +212,19 @@ public class RecordService {
 	 * @param 被调用时获取到的参数对象
 	 * @return 处理后的传递参数对象
 	 */
-	public HandleReturnPara HandleRecord(GprsRecFilePara grfp) {
-		if(grfp == null) {
-			L.error("[request data is null, pls check!]");
-			return null;
-		}
-		if(Tools.IsEmpty(grfp.getFileBody())) {
+	public HandleReturnPara HandleRecord(List<String> fb ,List<BbdcTypeCdr> rule,String fn ) {
+		if(Tools.IsEmpty(fb)) {
 			L.error("[request FileBody is null, pls check!]");
 			return null;
 		}
-		if(Tools.IsEmpty(grfp.getRule())) {
+		if(Tools.IsEmpty(rule)) {
 			L.error("[request validat rule is null, pls check!]");
 			return null;
 		}
-		List<String> fb = grfp.getFileBody();
-		List<BbdcTypeCdr> rule = grfp.getRule();
-		String fn = grfp.getFileName();
+		if(Tools.IsEmpty(fn)) {
+			L.error("[request fileName is null, pls check!]");
+			return null;
+		}
 		
 		List<String> fileBody = new LinkedList<>();
 		String re = null;
@@ -300,7 +296,7 @@ public class RecordService {
 		for(int i = 0; i < rule.size();i++) {
 			l.warn("[RULE-"+i+":"+rule.get(i).toString()+"]");
 		}
-		l.warn("FILEName:"+fileName);
+		l.warn("FILENAME:"+fileName);
 	}
 	
 	

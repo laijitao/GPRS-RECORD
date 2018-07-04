@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hp.cmcc.bboss.gprs.pojo.BbdcTypeCdr;
-import com.hp.cmcc.bboss.gprs.pojo.GprsRecFilePara;
 import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
 import com.hp.cmcc.bboss.gprs.service.RecordService;
 
@@ -23,12 +22,16 @@ public class RecordControl {
 	@Autowired
 	RecordService rs;
 	
+	@RequestMapping(value = "/test")
+	public String fnTest() {
+		return "I am still alive!";
+	}
+	
 	@RequestMapping(value = "/record/addField", method = RequestMethod.POST,consumes = "application/json")
 	public HandleReturnPara fn(@RequestParam("fileBody") List<String> fileBody, @RequestBody List<BbdcTypeCdr> rule, 
 			@RequestParam("fileName") String fileName) {
 		rs.createLogForTest(L,fileBody,rule,fileName);
-		GprsRecFilePara grfp = new GprsRecFilePara(fileBody, rule, fileName);
-		HandleReturnPara hrp = rs.HandleRecord(grfp);
+		HandleReturnPara hrp = rs.HandleRecord(fileBody, rule, fileName);
 		return hrp;
 	}
 

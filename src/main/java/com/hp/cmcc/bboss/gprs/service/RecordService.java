@@ -35,7 +35,7 @@ public class RecordService {
 	
 	@Autowired
 	@Qualifier("primaryJdbcTemplate")
-	protected JdbcTemplate jdbcTemplate1;
+	protected JdbcTemplate jdbcTemplate;
 	
 	RecRecordValid rv = new RecRecordValidImpl();
 	
@@ -44,7 +44,6 @@ public class RecordService {
 	/**
 	 * @param 规则
 	 * @param 文件记录
-	 * @param 记录hash
 	 * @param 文件名
 	 * @return 一条记录中处理后对应字段名，字段索引，字段值封装成的对象
 	 */
@@ -55,28 +54,43 @@ public class RecordService {
 		rule.sort((x,y) -> Integer.compare(x.getHinderIdx().intValue(), y.getHinderIdx().intValue()));
 		Map<String,FieldObject> m = new HashMap<>();
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
-		String bdcErrCode = null;
+		String bdcErrCode = "";
+		//校验记录中的字段是否缺失
+		try {
+			rv.validFieldNum(S.length, Integer.parseInt(map.get("BDC_ERR_CODE").getDataPattern()));
+		} catch (ValidException e) {
+			L.error(e.getErrMsg(),e);
+			bdcErrCode = e.getErrCode();
+		}
+		//记录拆分解析
 		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
 			BbdcTypeCdr cdr = entry.getValue(); 
 			FieldObject fieldObject = new FieldObject();
 			fieldObject.setFieldIndex(cdr.getHinderIdx().intValue());
 			fieldObject.setFieldName(cdr.getFieldName());
+			//需要添加的字段
 			if(cdr.getFormerIdx() == -1L) {
+				//创建时间
 				if("CREATE_DATE".equals(cdr.getFieldName().toUpperCase())){
 					fieldObject.setFieldValue(cdr.getDataFiller());
 				}
+				//行号
 				if("LINE_NUM".equals(cdr.getFieldName().toUpperCase())){
-					fieldObject.setFieldValue(lineNum+1+"");
+					fieldObject.setFieldValue(lineNum+"");
 				}
+				//文件名
 				if("FILE_NAME".equals(cdr.getFieldName().toUpperCase())){
 					fieldObject.setFieldValue(fn);
 				}
-				if(isConfirmServiceByFileName(fn)) {
+				//各省网元通知加载状态文件和发布结果通知文件不需要操作流水和bdc编码
+				if(isConfirmServiceByFileName(cdr.getValName())) {
+					//bdc编码
 					if("BDC_CODE".equals(cdr.getFieldName().toUpperCase())){
 						fieldObject.setFieldValue(cdr.getDataFiller());
 					}
+					//操作流水
 					if("OPER_SERIAL_NBR".equals(cdr.getFieldName().toUpperCase())){
-						String osn = null;
+						String osn = "";
 						try {
 							osn = getOperSerialNbrByKey(record, map);
 						} catch (ValidException e) {
@@ -87,30 +101,30 @@ public class RecordService {
 						fieldObject.setFieldValue(osn);
 					}
 				}
-			}else {
-				if(S.length == Integer.parseInt(map.get("BDC_ERR_CODE").getDataPattern())) {
-					fieldObject.setFieldValue(S[cdr.getFormerIdx().intValue()]);
-				} else {
-					try {
-						rv.validFieldNum(S.length, Integer.parseInt(map.get("BDC_ERR_CODE").getDataPattern()));
-					} catch (ValidException e) {
-						bdcErrCode = e.getErrCode();
-					}
-				}
+			}else {//原纪录中有的字段直接获取，否则填“”
+				fieldObject.setFieldValue(getValue(S,cdr.getFormerIdx()));
 			}
 			m.put(fieldObject.getFieldName(),fieldObject);
 		}
+		//设置内部检验码
 		if(Tools.IsBlank(bdcErrCode)) {//标识
+			//校验通过
 			m.get("BDC_ERR_CODE").setFieldValue(map.get("BDC_ERR_CODE").getDataFiller());
 		}else {
+			//校验未通过
 			m.get("BDC_ERR_CODE").setFieldValue(bdcErrCode);
 		}
+		
 		return Tools.mapToList(m);
+	}
+	
+	private String getValue(String[] s,Long index) {
+		return index < s.length ? s[index.intValue()] : "";
 	}
 
 	/**
 	 * @param s：记录转化后的数组
-	 * @param map：规则
+	 * @param map：解析规则
 	 * @return 查询操作流水的sql语句
 	 */
 	private String getSql(String record, Map<String, BbdcTypeCdr> map) {
@@ -119,10 +133,6 @@ public class RecordService {
 		return sql.trim().substring(0,sql.length()-1)+"'"+key+"'";
 	}
 
-	public int getErrCodeIndex(Map<String, BbdcTypeCdr> map) {
-		return map.get("ERR_CODE").getFormerIdx().intValue();
-	}
-	
 	/**
 	 * @param 关键字
 	 * @return 操作流水
@@ -130,10 +140,10 @@ public class RecordService {
 	 * @throws Exception
 	 */
 	private String getOperSerialNbrByKey(String record, Map<String, BbdcTypeCdr> map) throws ValidException{
-		String s = null;
+		String s = "";
 		String sql = getSql(record, map);
 		try {
-			s = jdbcTemplate1.queryForObject(sql, String.class);
+			s = jdbcTemplate.queryForObject(sql, String.class);
 		} catch (Exception e) {
 			throw new ValidException("F999","the OPER_SERIAL_NBR is null or not exist");
 		}
@@ -181,7 +191,7 @@ public class RecordService {
 		StringBuffer sb = new StringBuffer();
 		D.sort((x,y) -> Integer.compare(x.getFieldIndex(), y.getFieldIndex()));
 		for(FieldObject d : D) {
-			sb.append(setSqlFieldStr(d,"CREATE_DATE")+",");
+			sb.append(setSqlFieldStr(d,"CREATE_DATE","LINE_NUM")+",");
 		}
 		return sb.toString().substring(0, sb.toString().length()-1);
 	}
@@ -192,17 +202,14 @@ public class RecordService {
 	 * @return 错单数量
 	 */
 	public Integer getErrNum(List<String> fileBody,List<BbdcTypeCdr> rule) {
+		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
 		Integer errNum = 0;
-		for(BbdcTypeCdr cdr : rule) {
-			if("ERR_CODE".equals(cdr.getFieldName().toUpperCase())) {
-				for(String s : fileBody) {
-					if(s.split(",")//处理后的记录转化的数组
-							[cdr.getHinderIdx().intValue()].trim()//根据错码下标获取错码
-									.startsWith("'F")) {//判断是否为错码
-						errNum++;
-					}
-				}
-				break;
+		BbdcTypeCdr cdr = map.get("ERR_CODE");
+		for(String s : fileBody) {
+			if(s.split(",")//处理后的记录转化的数组
+					[cdr.getHinderIdx().intValue()].trim()//根据错码下标获取错码
+							.startsWith("'F")) {//判断是否为错码
+				errNum++;
 			}
 		}
 		return errNum;
@@ -233,7 +240,7 @@ public class RecordService {
 			if(Tools.IsBlank(re)) {
 				continue;
 			}
-			String record = createOutRecord(createCdrData(rule, re ,fn,i));
+			String record = createOutRecord(createCdrData(rule, re ,fn,i+2));
 			fileBody.add(record);
 			
 		}
@@ -304,10 +311,10 @@ public class RecordService {
 	 * @param fileName
 	 * @return 是不是需要对记录进行操作的业务类型
 	 */
-	public boolean isConfirmServiceByFileName(String fileName) {
-		if(fileName.startsWith(PubData.NOTIFY_INFO)) {
+	public boolean isConfirmServiceByFileName(String valName) {
+		if(valName.startsWith(PubData.NOTIFY_INFO)) {
 			return false;
-		}else if(fileName.startsWith(PubData.NOTIFY_RESULT)){
+		}else if(valName.startsWith(PubData.NOTIFY_RESULT)){
 			return false;
 		}
 		return true;

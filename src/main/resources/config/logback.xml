@@ -6,7 +6,7 @@
     <appender name="FILE"  class="ch.qos.logback.core.rolling.RollingFileAppender">   
        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
            <!--日志文件输出的文件名-->
-           <FileNamePattern>${LOG_HOME}/BDC-CDR-SERVICE/%d{yyyyMMdd}.log</FileNamePattern> 
+           <FileNamePattern>${LOG_HOME}/${spring.application.name}/%d{yyyyMMdd}.log</FileNamePattern> 
            <!--日志文件保留天数-->
            <MaxHistory>100</MaxHistory>
        </rollingPolicy>   
@@ -15,7 +15,7 @@
            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-1level %logger{50} - %msg%n</pattern>   
        </encoder> 
     </appender>
-    <root level="INFO">
+    <root level="WARN">
         <appender-ref ref="FILE"/>
     </root>
 </configuration>

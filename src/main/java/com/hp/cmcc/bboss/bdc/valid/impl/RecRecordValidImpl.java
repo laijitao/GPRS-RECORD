@@ -1,8 +1,8 @@
-package com.hp.cmcc.bboss.gprs.valid.impl;
+package com.hp.cmcc.bboss.bdc.valid.impl;
 
-import com.hp.cmcc.bboss.gprs.exception.ValidException;
-import com.hp.cmcc.bboss.gprs.utils.Tools;
-import com.hp.cmcc.bboss.gprs.valid.RecRecordValid;
+import com.hp.cmcc.bboss.bdc.exception.ValidException;
+import com.hp.cmcc.bboss.bdc.utils.Tools;
+import com.hp.cmcc.bboss.bdc.valid.RecRecordValid;
 
 public class RecRecordValidImpl implements RecRecordValid{
 	

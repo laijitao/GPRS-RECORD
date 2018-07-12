@@ -1,4 +1,4 @@
-package com.hp.cmcc.bboss.gprs.service;
+package com.hp.cmcc.bboss.bdc.service;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -13,14 +13,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.hp.cmcc.bboss.gprs.exception.ValidException;
-import com.hp.cmcc.bboss.gprs.pojo.BbdcTypeCdr;
-import com.hp.cmcc.bboss.gprs.pojo.FieldObject;
-import com.hp.cmcc.bboss.gprs.pojo.HandleReturnPara;
-import com.hp.cmcc.bboss.gprs.utils.PubData;
-import com.hp.cmcc.bboss.gprs.utils.Tools;
-import com.hp.cmcc.bboss.gprs.valid.RecRecordValid;
-import com.hp.cmcc.bboss.gprs.valid.impl.RecRecordValidImpl;
+import com.hp.cmcc.bboss.bdc.exception.ValidException;
+import com.hp.cmcc.bboss.bdc.pojo.BbdcTypeCdr;
+import com.hp.cmcc.bboss.bdc.pojo.FieldObject;
+import com.hp.cmcc.bboss.bdc.pojo.HandleReturnPara;
+import com.hp.cmcc.bboss.bdc.utils.PubData;
+import com.hp.cmcc.bboss.bdc.utils.Tools;
+import com.hp.cmcc.bboss.bdc.valid.RecRecordValid;
+import com.hp.cmcc.bboss.bdc.valid.impl.RecRecordValidImpl;
 
 
 /**
@@ -59,7 +59,6 @@ public class RecordService {
 		try {
 			rv.validFieldNum(S.length, Integer.parseInt(map.get("BDC_ERR_CODE").getDataPattern()));
 		} catch (ValidException e) {
-			L.error(e.getErrMsg(),e);
 			bdcErrCode = e.getErrCode();
 		}
 		//记录拆分解析
@@ -71,25 +70,25 @@ public class RecordService {
 			//需要添加的字段
 			if(cdr.getFormerIdx() == -1L) {
 				//创建时间
-				if("CREATE_DATE".equals(cdr.getFieldName().toUpperCase())){
+				if("CREATE_DATE".equalsIgnoreCase(cdr.getFieldName())){
 					fieldObject.setFieldValue(cdr.getDataFiller());
 				}
 				//行号
-				if("LINE_NUM".equals(cdr.getFieldName().toUpperCase())){
+				if("LINE_NUM".equalsIgnoreCase(cdr.getFieldName())){
 					fieldObject.setFieldValue(lineNum+"");
 				}
 				//文件名
-				if("FILE_NAME".equals(cdr.getFieldName().toUpperCase())){
+				if("FILE_NAME".equalsIgnoreCase(cdr.getFieldName())){
 					fieldObject.setFieldValue(fn);
 				}
 				//各省网元通知加载状态文件和发布结果通知文件不需要操作流水和bdc编码
-				if(isConfirmServiceByFileName(cdr.getValName())) {
+				if(isSpecialFile(cdr.getValName())) {
 					//bdc编码
-					if("BDC_CODE".equals(cdr.getFieldName().toUpperCase())){
+					if("BDC_CODE".equalsIgnoreCase(cdr.getFieldName())){
 						fieldObject.setFieldValue(cdr.getDataFiller());
 					}
 					//操作流水
-					if("OPER_SERIAL_NBR".equals(cdr.getFieldName().toUpperCase())){
+					if("OPER_SERIAL_NBR".equalsIgnoreCase(cdr.getFieldName())){
 						String osn = "";
 						try {
 							osn = getOperSerialNbrByKey(record, map);
@@ -114,8 +113,11 @@ public class RecordService {
 			//校验未通过
 			m.get("BDC_ERR_CODE").setFieldValue(bdcErrCode);
 		}
-		
 		return Tools.mapToList(m);
+	}
+	
+	public void setBdcErrCode(Map<String, BbdcTypeCdr> map,String bdcErrCode) {
+		
 	}
 	
 	private String getValue(String[] s,Long index) {
@@ -128,16 +130,20 @@ public class RecordService {
 	 * @return 查询操作流水的sql语句
 	 */
 	private String getSql(String record, Map<String, BbdcTypeCdr> map) {
-		String key = getKeyWord(record, map);
+		String key = "";
+		try {
+			key = getKeyWord(record, map);
+		} catch (ValidException e) {
+			L.error("[get the keyWord failed, please check the number of record field]"+",Original record:["+record+"]",e);
+		}
 		String sql = map.get("RECORD_HASH").getDataFiller();
 		return sql.trim().substring(0,sql.length()-1)+"'"+key+"'";
 	}
 
 	/**
-	 * @param 关键字
+	 * @param 记录
 	 * @return 操作流水
 	 * @throws ValidException 
-	 * @throws Exception
 	 */
 	private String getOperSerialNbrByKey(String record, Map<String, BbdcTypeCdr> map) throws ValidException{
 		String s = "";
@@ -154,19 +160,16 @@ public class RecordService {
 	 * @param s:记录转化后的数组
 	 * @param map:规则
 	 * @return 关键字
+	 * @throws ValidException 
 	 */
-	private String getKeyWord(String record,Map<String,BbdcTypeCdr> map){
+	private String getKeyWord(String record,Map<String,BbdcTypeCdr> map) throws ValidException{
 		String[] s = Tools.strToArr(record);
 		String key = "";
-		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
-			if("RECORD_HASH".equals(entry.getKey().toUpperCase())) {
-				try {
-					key = s[entry.getValue().getFormerIdx().intValue()];
-				} catch (Exception e) {
-					L.error("[get the keyWord failed, please check the number of record field]"+",raw record:["+record+"]",e);
-				}
-				break;
-			}
+		BbdcTypeCdr cdr = map.get("RECORD_HASH");
+		try {
+			key = s[cdr.getFormerIdx().intValue()];
+		} catch (Exception e) {
+			throw new ValidException("F997","[get the keyWord failed, please check it]");
 		}
 		return key;
 	}
@@ -178,7 +181,7 @@ public class RecordService {
 	private Map<String,BbdcTypeCdr> getRuleMap(List<BbdcTypeCdr> rule) {
 		Map<String,BbdcTypeCdr> map = new HashMap<String,BbdcTypeCdr>();
 		for(BbdcTypeCdr cdr : rule) {
-			map.put(cdr.getFieldName(), cdr);
+			map.put(cdr.getFieldName().toUpperCase(), cdr);
 		}
 		return map;
 	}
@@ -205,9 +208,10 @@ public class RecordService {
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
 		Integer errNum = 0;
 		BbdcTypeCdr cdr = map.get("ERR_CODE");
+		int index = cdr.getHinderIdx().intValue();
 		for(String s : fileBody) {
-			if(s.split(",")//处理后的记录转化的数组
-					[cdr.getHinderIdx().intValue()].trim()//根据错码下标获取错码
+			if(s.split(",",-1)//处理后的记录转化的数组
+					[index]//根据错码下标获取错码
 							.startsWith("'F")) {//判断是否为错码
 				errNum++;
 			}
@@ -295,15 +299,15 @@ public class RecordService {
 	 */
 	public void createLogForTest(Logger l, List<String> fileBody, List<BbdcTypeCdr> rule, String fileName) {
 		if(Tools.IsEmpty(fileBody) || Tools.IsEmpty(rule) || Tools.IsBlank(fileName)) {
-			l.error("request parameter wrong]");
+			l.debug("request parameter wrong]");
 		}
 		for(int i = 0; i < fileBody.size();i++) {
-			l.warn("[FILEBODY-"+i+":"+fileBody.get(i).toString()+"]");
+			l.debug("[FILEBODY-"+i+":"+fileBody.get(i).toString()+"]");
 		}
 		for(int i = 0; i < rule.size();i++) {
-			l.warn("[RULE-"+i+":"+rule.get(i).toString()+"]");
+			l.debug("[RULE-"+i+":"+rule.get(i).toString()+"]");
 		}
-		l.warn("FILENAME:"+fileName);
+		l.debug("FILENAME:"+fileName);
 	}
 	
 	
@@ -311,7 +315,7 @@ public class RecordService {
 	 * @param fileName
 	 * @return 是不是需要对记录进行操作的业务类型
 	 */
-	public boolean isConfirmServiceByFileName(String valName) {
+	public boolean isSpecialFile(String valName) {
 		if(valName.startsWith(PubData.NOTIFY_INFO)) {
 			return false;
 		}else if(valName.startsWith(PubData.NOTIFY_RESULT)){
@@ -319,6 +323,5 @@ public class RecordService {
 		}
 		return true;
 	}
-	
-	
+
 }

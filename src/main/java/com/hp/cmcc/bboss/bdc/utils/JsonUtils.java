@@ -1,4 +1,4 @@
-package com.hp.cmcc.bboss.gprs.utils;
+package com.hp.cmcc.bboss.bdc.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +28,7 @@ public class JsonUtils  {
 			L.error("obj is null!");
 			return "";
 		}
-		String json = null;
+		String json = "";
 		try {
 			json = mapper.writeValueAsString(obj);
 		} catch (JsonProcessingException e) {

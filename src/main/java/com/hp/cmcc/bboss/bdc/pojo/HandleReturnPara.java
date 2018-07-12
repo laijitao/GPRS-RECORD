@@ -1,4 +1,4 @@
-package com.hp.cmcc.bboss.gprs.pojo;
+package com.hp.cmcc.bboss.bdc.pojo;
 
 import java.io.Serializable;
 import java.util.List;

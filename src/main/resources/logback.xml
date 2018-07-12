@@ -6,7 +6,7 @@
     <appender name="FILE"  class="ch.qos.logback.core.rolling.RollingFileAppender">   
        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
            <!--日志文件输出的文件名-->
-           <FileNamePattern>${LOG_HOME}/${spring.application.name}/%d{yyyyMMdd}.log</FileNamePattern> 
+           <FileNamePattern>${LOG_HOME}/TEST-SERVER/%d{yyyyMMdd}.log</FileNamePattern> 
            <!--日志文件保留天数-->
            <MaxHistory>100</MaxHistory>
        </rollingPolicy>   

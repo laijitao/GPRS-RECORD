@@ -1,4 +1,4 @@
-package com.hp.cmcc.bboss.gprs.utils;
+package com.hp.cmcc.bboss.bdc.utils;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;

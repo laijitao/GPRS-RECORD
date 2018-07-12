@@ -1,6 +1,6 @@
-package com.hp.cmcc.bboss.gprs.valid;
+package com.hp.cmcc.bboss.bdc.valid;
 
-import com.hp.cmcc.bboss.gprs.exception.ValidException;
+import com.hp.cmcc.bboss.bdc.exception.ValidException;
 
 public interface RecRecordValid {
 	

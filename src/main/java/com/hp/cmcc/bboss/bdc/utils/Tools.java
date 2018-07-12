@@ -1,4 +1,4 @@
-package com.hp.cmcc.bboss.gprs.utils;
+package com.hp.cmcc.bboss.bdc.utils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hp.cmcc.bboss.gprs.utils.PubData.TimeStrFmt;
+import com.hp.cmcc.bboss.bdc.utils.PubData.TimeStrFmt;
 
 public class Tools {
 	static Logger L = LoggerFactory.getLogger(Tools.class);

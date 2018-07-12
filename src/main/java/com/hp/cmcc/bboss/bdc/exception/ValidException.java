@@ -1,4 +1,4 @@
-package com.hp.cmcc.bboss.gprs.exception;
+package com.hp.cmcc.bboss.bdc.exception;
 
 public class ValidException extends Exception {
 

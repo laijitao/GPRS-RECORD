@@ -23,7 +23,7 @@ public class RecordControl {
 	RecordService rs;
 	
 	@RequestMapping(value = "/record/addField", method = RequestMethod.POST,consumes = "application/json")
-	public HandleReturnPara fn(@RequestParam("fileBody") List<String> fileBody, @RequestBody List<BbdcTypeCdr> rule, 
+	public HandleReturnPara fn(@RequestParam("fileBody") List<String> fileBody,  @RequestBody List<BbdcTypeCdr> rule, 
 			@RequestParam("fileName") String fileName) {
 		long time = System.currentTimeMillis();
 //		rs.createLogForTest(L,fileBody,rule,fileName);
@@ -32,5 +32,22 @@ public class RecordControl {
 		return hrp;
 	}
 
-	
+//	@RequestMapping(value = "/test", method = RequestMethod.POST,consumes = "application/json")
+//	public List<String> test(@RequestBody List<User> users,@RequestParam("name") String name
+//			,@RequestParam("ct") Date ct) {
+//		List<String> list = new LinkedList<>();
+//		for(User u : users) {
+//			u.setName(name);
+//			u.setGender("男");
+//			u.setAge(18);
+//			u.setcT(ct);
+//			list.add(u.toString());
+//		}
+//		return list;
+//	}
+//	
+//	@RequestMapping(value = "/testSql", method = RequestMethod.POST,consumes = "application/json")
+//	public String testSql(@RequestParam("sql") String sql) {
+//		return rs.getDate(sql);
+//	}
 }

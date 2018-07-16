@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -63,7 +64,7 @@ public class RecordService {
 		}
 		//记录拆分解析
 		for (Entry<String, BbdcTypeCdr> entry : map.entrySet()) {
-			BbdcTypeCdr cdr = entry.getValue(); 
+			BbdcTypeCdr cdr = entry.getValue();
 			FieldObject fieldObject = new FieldObject();
 			fieldObject.setFieldIndex(cdr.getHinderIdx().intValue());
 			fieldObject.setFieldName(cdr.getFieldName());
@@ -136,7 +137,7 @@ public class RecordService {
 		} catch (ValidException e) {
 			L.error("[get the keyWord failed, please check the number of record field]"+",Original record:["+record+"]",e);
 		}
-		String sql = map.get("RECORD_HASH").getDataFiller();
+		String sql = map.get("ORDER_ID").getDataFiller();
 		return sql.trim().substring(0,sql.length()-1)+"'"+key+"'";
 	}
 
@@ -165,7 +166,7 @@ public class RecordService {
 	private String getKeyWord(String record,Map<String,BbdcTypeCdr> map) throws ValidException{
 		String[] s = Tools.strToArr(record);
 		String key = "";
-		BbdcTypeCdr cdr = map.get("RECORD_HASH");
+		BbdcTypeCdr cdr = map.get("ORDER_ID");
 		try {
 			key = s[cdr.getFormerIdx().intValue()];
 		} catch (Exception e) {
@@ -322,6 +323,11 @@ public class RecordService {
 			return false;
 		}
 		return true;
+	}
+
+	public String getDate(String sql) {
+		SqlRowSet rs = jdbcTemplate.queryForRowSet(sql);
+		return rs.getString("EFF_DATE");
 	}
 
 }

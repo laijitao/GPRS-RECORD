@@ -18,7 +18,7 @@ public class BbdcTypeCdr implements Serializable {
 	private String dataReplace;  //
 	private String dataSeparator;//分隔符
 	private String dataType;     //数据类型
-	private Date effDate;        //生效时间
+	private Date effDate;        //生效时间:2018/6/1
 	private Date expDate;        //失效时间
 	private Long fieldIdx;       //字段索引
 	private Long fieldLen;       //字段长度

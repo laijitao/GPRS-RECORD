@@ -1,5 +1,6 @@
-package com.hp.cmcc.bboss.bdc.service;
+package com.hp.cmcc.bboss.bdc.handle;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -7,13 +8,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.scheduling.annotation.AsyncResult;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.stereotype.Component;
+import org.springframework.util.concurrent.ListenableFuture;
 
+import com.hp.cmcc.bboss.bdc.config.BdcBeanFactory;
 import com.hp.cmcc.bboss.bdc.exception.ValidException;
 import com.hp.cmcc.bboss.bdc.pojo.BbdcTypeCdr;
 import com.hp.cmcc.bboss.bdc.pojo.FieldObject;
@@ -23,24 +24,13 @@ import com.hp.cmcc.bboss.bdc.utils.Tools;
 import com.hp.cmcc.bboss.bdc.valid.RecRecordValid;
 import com.hp.cmcc.bboss.bdc.valid.impl.RecRecordValidImpl;
 
-
-/**
- * @author ljt
- * 2018-06-27
- */
-@Service
-public class RecordService {
-	
-	@Autowired
-	RestTemplate rt;
-	
-	@Autowired
-	@Qualifier("primaryJdbcTemplate")
-	protected JdbcTemplate jdbcTemplate;
+@Component("RecordHandle")
+@EnableAsync
+public class RecordHandle {
 	
 	RecRecordValid rv = new RecRecordValidImpl();
 	
-	Logger L = LoggerFactory.getLogger(RecordService.class);
+	private Logger L = LoggerFactory.getLogger(RecordHandle.class);
 	
 	/**
 	 * @param 规则
@@ -51,8 +41,6 @@ public class RecordService {
 	public List<FieldObject> createCdrData(List<BbdcTypeCdr> rule,String record,String fn,Long lineNum){
 		
 		String[] S = Tools.strToArr(record);
-//		String[] S = validation(record,cdr);//后期校验
-		rule.sort((x,y) -> Integer.compare(x.getHinderIdx().intValue(), y.getHinderIdx().intValue()));
 		Map<String,FieldObject> m = new HashMap<>();
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
 		String bdcErrCode = "";
@@ -83,7 +71,7 @@ public class RecordService {
 					fieldObject.setFieldValue(fn);
 				}
 				//各省网元通知加载状态文件和发布结果通知文件不需要操作流水和bdc编码
-				if(isSpecialFile(cdr.getValName())) {
+				if(!isSpecialFile(cdr.getValName())) {
 					//bdc编码
 					if("BDC_CODE".equalsIgnoreCase(cdr.getFieldName())){
 						fieldObject.setFieldValue(cdr.getDataFiller());
@@ -92,11 +80,14 @@ public class RecordService {
 					if("OPER_SERIAL_NBR".equalsIgnoreCase(cdr.getFieldName())){
 						String osn = "";
 						try {
-							osn = getOperSerialNbrByKey(record, map);
+							osn = getOperSerialNbrByKey(record, map,lineNum);
 						} catch (ValidException e) {
-							L.error(e.getErrMsg()+",Original record:["+record+"],fileName:"+fn+",lineNum:"+lineNum,e);
+							L.error(e.getErrMsg()+",Original record:["+record+"],fileName:"+fn+",lineNum:"+lineNum);
+//							L.error(e.getErrMsg()+",Original record:["+record+"],fileName:"+fn+",lineNum:"+lineNum,e);
 							fieldObject.setFieldValue(osn);
-							bdcErrCode = e.getErrCode();
+							if(Tools.IsBlank(bdcErrCode)) {
+								bdcErrCode = e.getErrCode();
+							}
 						}
 						fieldObject.setFieldValue(osn);
 					}
@@ -129,14 +120,10 @@ public class RecordService {
 	 * @param s：记录转化后的数组
 	 * @param map：解析规则
 	 * @return 查询操作流水的sql语句
+	 * @throws ValidException 
 	 */
-	private String getSql(String record, Map<String, BbdcTypeCdr> map) {
-		String key = "";
-		try {
-			key = getKeyWord(record, map);
-		} catch (ValidException e) {
-			L.error("[get the keyWord failed, please check the number of record field]"+",Original record:["+record+"]",e);
-		}
+	private String getSql(String record, Map<String, BbdcTypeCdr> map,long lineNum) throws ValidException {
+		String key = getKeyWord(record, map,lineNum);
 		String sql = map.get("ORDER_ID").getDataFiller();
 		return sql.trim().substring(0,sql.length()-1)+"'"+key+"'";
 	}
@@ -146,12 +133,16 @@ public class RecordService {
 	 * @return 操作流水
 	 * @throws ValidException 
 	 */
-	private String getOperSerialNbrByKey(String record, Map<String, BbdcTypeCdr> map) throws ValidException{
+	private String getOperSerialNbrByKey(String record, Map<String, BbdcTypeCdr> map,long lineNum) throws ValidException{
 		String s = "";
-		String sql = getSql(record, map);
 		try {
+			String sql = getSql(record, map,lineNum);
+			JdbcTemplate jdbcTemplate = BdcBeanFactory.getBean("mysqlJdbcTemplate", JdbcTemplate.class);
+//			JdbcTemplate jdbcTemplate = BdcBeanFactory.getBean("primaryJdbcTemplate", JdbcTemplate.class);
 			s = jdbcTemplate.queryForObject(sql, String.class);
-		} catch (Exception e) {
+		} catch (ValidException e1) {
+			throw new ValidException(e1.getErrCode(),e1.getErrMsg());
+		}catch (Exception e2) {
 			throw new ValidException("F999","the OPER_SERIAL_NBR is null or not exist");
 		}
 		return s;
@@ -163,14 +154,14 @@ public class RecordService {
 	 * @return 关键字
 	 * @throws ValidException 
 	 */
-	private String getKeyWord(String record,Map<String,BbdcTypeCdr> map) throws ValidException{
+	private String getKeyWord(String record,Map<String,BbdcTypeCdr> map,long lineNum) throws ValidException{
 		String[] s = Tools.strToArr(record);
 		String key = "";
 		BbdcTypeCdr cdr = map.get("ORDER_ID");
 		try {
 			key = s[cdr.getFormerIdx().intValue()];
 		} catch (Exception e) {
-			throw new ValidException("F997","[get the keyWord failed, please check it]");
+			throw new ValidException("F997","[get the keyWord failed, please check the number of record field],LineNum:"+lineNum+",Original record:["+record+"]");
 		}
 		return key;
 	}
@@ -179,7 +170,7 @@ public class RecordService {
 	 * @param rule:规则
 	 * @return 以FIELD_NAME为key，规则为value的map
 	 */
-	private Map<String,BbdcTypeCdr> getRuleMap(List<BbdcTypeCdr> rule) {
+	public Map<String,BbdcTypeCdr> getRuleMap(List<BbdcTypeCdr> rule) {
 		Map<String,BbdcTypeCdr> map = new HashMap<String,BbdcTypeCdr>();
 		for(BbdcTypeCdr cdr : rule) {
 			map.put(cdr.getFieldName().toUpperCase(), cdr);
@@ -205,6 +196,20 @@ public class RecordService {
 	 * @param 规则
 	 * @return 错单数量
 	 */
+	public boolean isErrorRecord(String s,int index) {
+		if(s.split(",",-1)//处理后的记录转化的数组
+				[index]//根据错码下标获取错码
+						.startsWith("'F")) {//判断是否为错码
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * @param 文件体
+	 * @param 规则
+	 * @return 错单数量
+	 */
 	public Integer getErrNum(List<String> fileBody,List<BbdcTypeCdr> rule) {
 		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
 		Integer errNum = 0;
@@ -223,6 +228,7 @@ public class RecordService {
 	/**
 	 * @param 被调用时获取到的参数对象
 	 * @return 处理后的传递参数对象
+	 * @throws IOException 
 	 */
 	public HandleReturnPara HandleRecord(List<String> fb ,List<BbdcTypeCdr> rule,String fn ) {
 		if(Tools.IsEmpty(fb)) {
@@ -237,9 +243,9 @@ public class RecordService {
 			L.error("[request fileName is null, pls check!]");
 			return null;
 		}
-		
 		List<String> fileBody = new LinkedList<>();
 		String re = null;
+		
 		for(Long i = 0L;i < fb.size();i++) {
 			re = fb.get(i.intValue());
 			if(Tools.IsBlank(re)) {
@@ -247,35 +253,10 @@ public class RecordService {
 			}
 			String record = createOutRecord(createCdrData(rule, re ,fn,i+2));
 			fileBody.add(record);
-			
 		}
 		Integer errNum = getErrNum(fileBody,rule);
 		HandleReturnPara hrp = new HandleReturnPara(fileBody, errNum);
 		return hrp;
-	}
-
-	/**
-	 * @param 一条记录
-	 * @param 规则
-	 * @return 重置错码后的记录
-	 */
-	@SuppressWarnings("unused")
-	private String setErrCode(String[] record, List<BbdcTypeCdr> rule,String errCOde) {
-		Map<String, BbdcTypeCdr> map = getRuleMap(rule);
-		record[map.get("ERR_CODE").getFormerIdx().intValue()] = errCOde;
-		return arrToRecord(record);
-	}
-
-	/**
-	 * @param 记录转化后的数组
-	 * @return 以“,”为分隔符的字符串
-	 */
-	private String arrToRecord(String[] record) {
-		StringBuffer re = new StringBuffer("");
-		for(int i = 0;i < record.length;i++) {
-			re.append(record[i]+",");
-		}
-		return re.toString().substring(0, re.length()-1);
 	}
 	
 	public String setSqlFieldStr(FieldObject fo,String... fieldName) {
@@ -290,44 +271,25 @@ public class RecordService {
 		return "'"+fo.getFieldValue()+"'";
 	}
 
-	
-	/**
-	 * @param l
-	 * @param fileBody
-	 * @param rule
-	 * @param fileName
-	 * 打印测试的日志
-	 */
-	public void createLogForTest(Logger l, List<String> fileBody, List<BbdcTypeCdr> rule, String fileName) {
-		if(Tools.IsEmpty(fileBody) || Tools.IsEmpty(rule) || Tools.IsBlank(fileName)) {
-			l.debug("request parameter wrong]");
-		}
-		for(int i = 0; i < fileBody.size();i++) {
-			l.debug("[FILEBODY-"+i+":"+fileBody.get(i).toString()+"]");
-		}
-		for(int i = 0; i < rule.size();i++) {
-			l.debug("[RULE-"+i+":"+rule.get(i).toString()+"]");
-		}
-		l.debug("FILENAME:"+fileName);
-	}
-	
-	
 	/**
 	 * @param fileName
 	 * @return 是不是需要对记录进行操作的业务类型
 	 */
 	public boolean isSpecialFile(String valName) {
 		if(valName.startsWith(PubData.NOTIFY_INFO)) {
-			return false;
+			return true;
 		}else if(valName.startsWith(PubData.NOTIFY_RESULT)){
-			return false;
+			return true;
 		}
-		return true;
+		return false;
 	}
-
-	public String getDate(String sql) {
-		SqlRowSet rs = jdbcTemplate.queryForRowSet(sql);
-		return rs.getString("EFF_DATE");
+	
+	public ListenableFuture<String> handleRecord(String record, List<BbdcTypeCdr> rule, String fileName,long lineNum) {
+		ListenableFuture<String> future;
+		List<FieldObject> list = createCdrData(rule,record,fileName,lineNum);
+		String rec = createOutRecord(list);
+		future = new AsyncResult<String>(rec);
+		return future;
 	}
-
+	
 }
